@@ -1,0 +1,18 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm rebuild *)",
+      "Bash(npx prisma *)",
+      "Bash(rm -f dev.db)",
+      "Bash(rm -rf prisma/migrations)",
+      "Bash(mkdir -p prisma/migrations/00000000000000_init)",
+      "Bash(cp /tmp/init.sql prisma/migrations/00000000000000_init/migration.sql)",
+      "Bash(npx ts-node *)",
+      "Bash(cat /tmp/api.log 2>&1 | tail -60)",
+      "Read(//tmp/**)",
+      "Bash(taskkill //F //IM node.exe)",
+      "Bash(curl -s http://localhost:3000/booking/confirmation/56c97bfa-ae27-4aa0-b78d-ecb65d994c7b)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\\\\n\" http://localhost:3000/booking/confirmation/56c97bfa-ae27-4aa0-b78d-ecb65d994c7b)"
+    ]
+  }
+}

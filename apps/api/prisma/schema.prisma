@@ -1,0 +1,221 @@
+// Mehndi By Dhara - Prisma schema
+// SQLite dialect throughout (no Postgres/MySQL install ever required). Locally this reads a
+// plain file (DATABASE_URL="file:./dev.db"). In production on Vercel — whose serverless
+// functions have an ephemeral, per-invocation filesystem — the exact same schema is served
+// over the network by Turso (libsql, a hosted SQLite-compatible engine), selected via the
+// driver adapter configured in src/prisma/prisma.service.ts. Nothing here changes between
+// the two; only PrismaService's constructor picks a local file vs. a remote libsql URL.
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["driverAdapters"]
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String   @id @default(uuid())
+  email        String   @unique
+  passwordHash String
+  name         String
+  role         String   @default("ADMIN") // ADMIN | CUSTOMER
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([email])
+}
+
+model Customer {
+  id             String    @id @default(uuid())
+  fullName       String
+  phone          String    @unique
+  whatsappNumber String
+  email          String?
+  address        String?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+  bookings       Booking[]
+}
+
+model ServiceCategory {
+  id          String    @id @default(uuid())
+  slug        String    @unique
+  name        String
+  description String?
+  sortOrder   Int       @default(0)
+  isActive    Boolean   @default(true)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  services    Service[]
+}
+
+model Service {
+  id           String           @id @default(uuid())
+  categoryId   String
+  category     ServiceCategory  @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  name         String
+  description  String?
+  isActive     Boolean          @default(true)
+  sortOrder    Int              @default(0)
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
+  pricingTiers ServicePricing[]
+  bookings     Booking[]
+
+  @@index([categoryId])
+}
+
+model ServicePricing {
+  id            String    @id @default(uuid())
+  serviceId     String
+  service       Service   @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+  lengthLabel   String // e.g. "Palm Length", "Elbow Length"
+  price         Int // in INR
+  whatsIncluded String
+  sortOrder     Int       @default(0)
+  isActive      Boolean   @default(true)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  bookings      Booking[]
+
+  @@index([serviceId])
+}
+
+model Availability {
+  id          String     @id @default(uuid())
+  date        DateTime
+  isAvailable Boolean    @default(true)
+  note        String?
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+  timeSlots   TimeSlot[]
+
+  @@unique([date])
+}
+
+model TimeSlot {
+  id             String       @id @default(uuid())
+  availabilityId String
+  availability   Availability @relation(fields: [availabilityId], references: [id], onDelete: Cascade)
+  startTime      String // "10:00"
+  endTime        String // "11:00"
+  isBooked       Boolean      @default(false)
+  bookings       Booking[]
+
+  @@unique([availabilityId, startTime])
+  @@index([availabilityId])
+}
+
+model Booking {
+  id              String         @id @default(uuid())
+  bookingNumber   String         @unique
+  customerId      String
+  customer        Customer       @relation(fields: [customerId], references: [id])
+  serviceId       String
+  service         Service        @relation(fields: [serviceId], references: [id])
+  pricingId       String
+  pricing         ServicePricing @relation(fields: [pricingId], references: [id])
+  timeSlotId      String?
+  timeSlot        TimeSlot?      @relation(fields: [timeSlotId], references: [id])
+  appointmentDate DateTime
+  appointmentTime String
+  eventType       String?
+  numberOfPeople  Int            @default(1)
+  notes           String?
+  pricePerPerson  Int
+  totalAmount     Int
+  advanceAmount   Int
+  remainingAmount Int
+  status          String         @default("PENDING") // PENDING|CONFIRMED|REJECTED|CANCELLED|COMPLETED
+  termsAccepted   Boolean        @default(false)
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  statusHistory BookingStatusHistory[]
+  payments      Payment[]
+  notifications Notification[]
+
+  @@index([customerId])
+  @@index([status])
+  @@index([appointmentDate])
+}
+
+model BookingStatusHistory {
+  id        String   @id @default(uuid())
+  bookingId String
+  booking   Booking  @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  status    String
+  note      String?
+  createdAt DateTime @default(now())
+
+  @@index([bookingId])
+}
+
+model Payment {
+  id              String   @id @default(uuid())
+  bookingId       String
+  booking         Booking  @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  amount          Int // amount for this transaction row (e.g. advance collected)
+  totalAmount     Int? // snapshot of booking total at creation time
+  advanceAmount   Int? // snapshot of booking advance at creation time
+  remainingAmount Int? // snapshot of booking remaining at creation time
+  status          String   @default("PENDING") // PENDING|PARTIAL|PAID|REFUNDED
+  method          String? // manual note for now; Razorpay-ready
+  reference       String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([bookingId])
+}
+
+model Notification {
+  id                String   @id @default(uuid())
+  bookingId         String
+  booking           Booking  @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  type              String // BOOKING_CREATED|BOOKING_CONFIRMED|BOOKING_REJECTED|BOOKING_CANCELLED|BOOKING_COMPLETED
+  channel           String // SMS|WHATSAPP
+  recipient         String
+  message           String
+  status            String   @default("PENDING") // PENDING|SENT|FAILED
+  provider          String?
+  providerMessageId String?
+  errorMessage      String?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@index([bookingId])
+  @@index([status])
+}
+
+model Gallery {
+  id        String   @id @default(uuid())
+  imageUrl  String
+  title     String?
+  category  String?
+  sortOrder Int      @default(0)
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Testimonial {
+  id           String   @id @default(uuid())
+  customerName String
+  message      String
+  rating       Int      @default(5)
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+model ContactMessage {
+  id        String   @id @default(uuid())
+  name      String
+  email     String?
+  phone     String?
+  message   String
+  isRead    Boolean  @default(false)
+  createdAt DateTime @default(now())
+}
