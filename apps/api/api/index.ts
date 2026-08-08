@@ -6,21 +6,27 @@ import express from 'express';
 import { AppModule } from '../src/app.module';
 import { configureApp } from '../src/configure-app';
 
-// Vercel serverless functions get a fresh container per cold start but stay warm across
-// requests within that container, so we cache the initialized Nest app on the module scope
-// instead of rebuilding it on every invocation (rebuilding would be the dominant cost of
-// each request otherwise).
 const server = express();
+
 let bootstrapped: Promise<void> | undefined;
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule, new ExpressAdapter(server));
+
   configureApp(app);
+
   await app.init();
 }
 
-export default async function handler(req: VercelRequest, res: VercelResponse) {
-  if (!bootstrapped) bootstrapped = bootstrap();
+export default async function handler(
+  req: VercelRequest,
+  res: VercelResponse,
+) {
+  if (!bootstrapped) {
+    bootstrapped = bootstrap();
+  }
+
   await bootstrapped;
+
   server(req, res);
 }
