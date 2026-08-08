@@ -36,9 +36,7 @@ export function configureApp(app: INestApplication) {
     .addBearerAuth()
     .build();
   const document = SwaggerModule.createDocument(app, config);
-  SwaggerModule.setup('api/docs', app, document, {
-    useGlobalPrefix: false,
-  });
+  SwaggerModule.setup('api/docs', app, document);
 
   return app;
 }
