@@ -11,7 +11,19 @@ import { ResponseInterceptor } from './common/interceptors/response.interceptor'
  * Swagger docs — the only difference between them is how the resulting app is served.
  */
 export function configureApp(app: INestApplication) {
-  app.use(helmet());
+  app.use(
+    helmet({
+      contentSecurityPolicy: {
+        directives: {
+          ...helmet.contentSecurityPolicy.getDefaultDirectives(),
+          'script-src': ["'self'", "'unsafe-inline'", 'cdn.jsdelivr.net'],
+          'style-src': ["'self'", "'unsafe-inline'", 'cdn.jsdelivr.net'],
+          'img-src': ["'self'", 'data:', 'cdn.jsdelivr.net'],
+          'connect-src': ["'self'", 'cdn.jsdelivr.net'],
+        },
+      },
+    }),
+  );
   app.enableCors({
     origin: process.env.CORS_ORIGIN?.split(',') ?? 'http://localhost:3000',
     credentials: true,
@@ -45,6 +57,7 @@ export function configureApp(app: INestApplication) {
       'https://cdn.jsdelivr.net/npm/swagger-ui-dist@5/swagger-ui-bundle.js',
       'https://cdn.jsdelivr.net/npm/swagger-ui-dist@5/swagger-ui-standalone-preset.js',
     ],
+    customfavIcon: false,
   });
 
   return app;
