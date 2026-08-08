@@ -11,19 +11,7 @@ import { ResponseInterceptor } from './common/interceptors/response.interceptor'
  * Swagger docs — the only difference between them is how the resulting app is served.
  */
 export function configureApp(app: INestApplication) {
-  app.use(
-    helmet({
-      contentSecurityPolicy: {
-        directives: {
-          ...helmet.contentSecurityPolicy.getDefaultDirectives(),
-          'script-src': ["'self'", "'unsafe-inline'", 'cdn.jsdelivr.net'],
-          'style-src': ["'self'", "'unsafe-inline'", 'cdn.jsdelivr.net'],
-          'img-src': ["'self'", 'data:', 'cdn.jsdelivr.net'],
-          'connect-src': ["'self'", 'cdn.jsdelivr.net'],
-        },
-      },
-    }),
-  );
+  app.use(helmet());
   app.enableCors({
     origin: process.env.CORS_ORIGIN?.split(',') ?? 'http://localhost:3000',
     credentials: true,
@@ -48,16 +36,7 @@ export function configureApp(app: INestApplication) {
     .addBearerAuth()
     .build();
   const document = SwaggerModule.createDocument(app, config);
-  SwaggerModule.setup('api/docs', app, document, {
-    // Vercel's serverless bundler doesn't ship swagger-ui-dist's static assets,
-    // so load them from a CDN instead of relying on local static file serving.
-    customCssUrl:
-      'https://cdn.jsdelivr.net/npm/swagger-ui-dist@5/swagger-ui.css',
-    customJs: [
-      'https://cdn.jsdelivr.net/npm/swagger-ui-dist@5/swagger-ui-bundle.js',
-      'https://cdn.jsdelivr.net/npm/swagger-ui-dist@5/swagger-ui-standalone-preset.js',
-    ],
-  });
+  SwaggerModule.setup('api/docs', app, document);
 
   return app;
 }
