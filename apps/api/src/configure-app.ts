@@ -57,7 +57,6 @@ export function configureApp(app: INestApplication) {
       'https://cdn.jsdelivr.net/npm/swagger-ui-dist@5/swagger-ui-bundle.js',
       'https://cdn.jsdelivr.net/npm/swagger-ui-dist@5/swagger-ui-standalone-preset.js',
     ],
-    customfavIcon: false,
   });
 
   return app;
